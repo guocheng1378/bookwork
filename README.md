@@ -2,6 +2,10 @@
 
 一个基于 Jetpack Compose 的 Android 小说阅读器，支持 TXT 和 EPUB 格式。
 
+## 📥 下载
+
+👉 [前往 Releases 页面下载最新 APK](https://github.com/guocheng1378/bookwork/releases/latest)
+
 ## ✨ 功能特性
 
 - 📖 支持 **TXT** 和 **EPUB** 格式小说
@@ -43,27 +47,15 @@ app/src/main/java/com/novelreader/
 ## 🚀 构建
 
 ```bash
-# 克隆项目
 git clone https://github.com/guocheng1378/bookwork.git
 cd bookwork
-
-# 构建 Debug APK
 ./gradlew assembleDebug
-
-# APK 输出位置
-app/build/outputs/apk/debug/app-debug.apk
 ```
+
+APK 输出位置：`app/build/outputs/apk/debug/app-debug.apk`
 
 **环境要求：**
 - Android Studio Hedgehog (2023.1.1) 或更高
 - JDK 17
 - Android SDK 34
 - minSdk 29 (Android 10)
-
-## 📱 截图
-
-_（待补充）_
-
-## 📄 License
-
-_（待补充）_
