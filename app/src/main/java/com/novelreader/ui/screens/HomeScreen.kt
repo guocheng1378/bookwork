@@ -415,7 +415,7 @@ private suspend fun importFolder(
     zipDir.mkdirs()
     bookDir.mkdirs()
 
-    fun scanAndImport(dirUri: Uri, depth: Int = 0) {
+    suspend fun scanAndImport(dirUri: Uri, depth: Int = 0) {
         if (depth > 8) return
         val dir = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, dirUri) ?: return
         for (file in dir.listFiles()) {
