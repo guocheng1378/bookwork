@@ -2,23 +2,31 @@ package com.novelreader.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Material 3 fallback colors
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// MIUI / HyperOS inspired palette
+// Light
+val MIUI_Blue = Color(0xFF5B7FFF)
+val MIUI_BlueLight = Color(0xFFE8EDFF)
+val MIUI_Green = Color(0xFF4CD964)
+val MIUI_GreenLight = Color(0xFFE8F9ED)
+val MIUI_Orange = Color(0xFFFF9F0A)
+val MIUI_OrangeLight = Color(0xFFFFF4E0)
+val MIUI_Red = Color(0xFFFF3B30)
+val MIUI_RedLight = Color(0xFFFFECEB)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val MIUI_Surface = Color(0xFFF7F8FA)
+val MIUI_SurfaceAlt = Color(0xFFFFFFFF)
+val MIUI_Card = Color(0xFFFFFFFF)
+val MIUI_Background = Color(0xFFF2F3F5)
+val MIUI_TextPrimary = Color(0xFF1B1C1E)
+val MIUI_TextSecondary = Color(0xFF8B8D92)
+val MIUI_Divider = Color(0xFFE8E8EC)
 
-// Glass theme colors
-val GlassSurfaceLight = Color(0x59FFFFFF)
-val GlassSurfaceDark = Color(0x591C1B1F)
-val GlassContentLight = Color(0xD9000000)
-val GlassContentDark = Color(0xD9FFFFFF)
-
-// Accent colors
-val PrimaryBlue = Color(0xFF1A73E8)
-val PrimaryBlueDark = Color(0xFF8AB4F8)
-val SecondaryTeal = Color(0xFF00BFA5)
-val SecondaryTealDark = Color(0xFF64FFDA)
+// Dark
+val MIUI_BlueDark = Color(0xFF7B9AFF)
+val MIUI_SurfaceDark = Color(0xFF1C1C1E)
+val MIUI_SurfaceAltDark = Color(0xFF2C2C2E)
+val MIUI_CardDark = Color(0xFF2C2C2E)
+val MIUI_BackgroundDark = Color(0xFF000000)
+val MIUI_TextPrimaryDark = Color(0xFFF5F5F7)
+val MIUI_TextSecondaryDark = Color(0xFF8E8E93)
+val MIUI_DividerDark = Color(0xFF38383A)
