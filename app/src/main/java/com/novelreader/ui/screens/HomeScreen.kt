@@ -1,5 +1,6 @@
 package com.novelreader.ui.screens
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,10 +30,12 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     var recentFiles by remember { mutableStateOf<List<BookFile>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         repository.getRecentFiles().collect { files ->
             recentFiles = files
+            isLoading = false
         }
     }
 
@@ -40,6 +43,16 @@ fun HomeScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
+            // Take persistable read permission so we can access it later
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                // Some providers don't support persistable permissions
+            }
+
             val fileName = uri.lastPathSegment?.substringAfterLast('/') ?: "未知文件"
             val filePath = uri.toString()
             onBookClick(filePath, fileName)
@@ -75,7 +88,8 @@ fun HomeScreen(
                         openDocumentLauncher.launch(arrayOf(
                             "text/plain",
                             "application/epub+zip",
-                            "application/octet-stream"
+                            "application/octet-stream",
+                            "*/*"
                         ))
                     },
                 shape = MaterialTheme.shapes.large,
@@ -104,58 +118,66 @@ fun HomeScreen(
                 }
             }
 
-            // Recent files section
-            if (recentFiles.isNotEmpty()) {
-                Text(
-                    text = "最近阅读",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
-                )
-
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(recentFiles) { file ->
-                        RecentFileItem(
-                            file = file,
-                            onClick = {
-                                val filePath = file.filePath
-                                if (filePath.startsWith("content://")) {
-                                    onBookClick(filePath, file.fileName)
-                                } else if (File(filePath).exists()) {
-                                    onBookClick(filePath, file.fileName)
-                                }
-                            }
-                        )
+            when {
+                isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
                 }
-            } else {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                recentFiles.isNotEmpty() -> {
+                    Text(
+                        text = "最近阅读",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
+                    )
+
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            Icons.Default.MenuBook,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "暂无阅读记录",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            "点击上方按钮打开小说",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
+                        items(recentFiles) { file ->
+                            RecentFileItem(
+                                file = file,
+                                onClick = {
+                                    onBookClick(file.filePath, file.fileName)
+                                },
+                                onDelete = {
+                                    recentFiles = recentFiles.filter { it.filePath != file.filePath }
+                                }
+                            )
+                        }
+                    }
+                }
+                else -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Default.MenuBook,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "暂无阅读记录",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                "点击上方按钮打开小说",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
+                        }
                     }
                 }
             }
@@ -166,7 +188,8 @@ fun HomeScreen(
 @Composable
 private fun RecentFileItem(
     file: BookFile,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -194,7 +217,7 @@ private fun RecentFileItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = file.filePath,
+                    text = if (file.filePath.startsWith("content://")) "外部文件" else file.filePath,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
