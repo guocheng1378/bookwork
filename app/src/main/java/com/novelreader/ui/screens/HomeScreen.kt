@@ -31,6 +31,7 @@ fun HomeScreen(
     val context = LocalContext.current
     var recentFiles by remember { mutableStateOf<List<BookFile>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var permWarning by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         repository.getRecentFiles().collect { files ->
@@ -43,19 +44,40 @@ fun HomeScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            // Take persistable read permission so we can access it later
+            // Try to persist URI permission
+            var persistOk = false
             try {
                 context.contentResolver.takePersistableUriPermission(
                     it,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-            } catch (_: Exception) {
-                // Some providers don't support persistable permissions
+                persistOk = true
+            } catch (e: Exception) {
+                // Provider doesn't support persistable permissions
             }
 
             val fileName = uri.lastPathSegment?.substringAfterLast('/') ?: "未知文件"
-            val filePath = uri.toString()
-            onBookClick(filePath, fileName)
+
+            if (persistOk) {
+                // Normal path: use content:// URI directly
+                permWarning = null
+                onBookClick(uri.toString(), fileName)
+            } else {
+                // Fallback: copy file to app private storage for reliable access
+                try {
+                    val localFile = File(context.filesDir, "books/${fileName}")
+                    localFile.parentFile?.mkdirs()
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        localFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    permWarning = null
+                    onBookClick(localFile.absolutePath, fileName)
+                } catch (e: Exception) {
+                    permWarning = "文件复制失败: ${e.message}"
+                }
+            }
         }
     }
 
@@ -79,6 +101,35 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Permission warning
+            permWarning?.let { warning ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = warning,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+
             // Open file button
             Card(
                 modifier = Modifier
