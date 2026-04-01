@@ -49,6 +49,7 @@ fun ReaderScreen(
     var toastMessage by remember { mutableStateOf("") }
     var toastVisible by remember { mutableStateOf(false) }
     var forcedEncoding by remember { mutableStateOf<String?>(null) }
+    var customPatterns by remember { mutableStateOf<List<String>>(emptyList()) }
 
     // SAF file picker for re-opening files
     val openDocumentLauncher = rememberLauncherForActivityResult(
@@ -74,7 +75,7 @@ fun ReaderScreen(
                     localPath = localFile.absolutePath
                 } catch (_: Exception) {}
             }
-            loadFile(context, localPath, pickedName, forcedEncoding)?.let { result ->
+            loadFile(context, localPath, pickedName, forcedEncoding, customPatterns)?.let { result ->
                 chapters = result
                 repository.addRecentFile(localPath, pickedName)
             } ?: run {
@@ -88,6 +89,7 @@ fun ReaderScreen(
     LaunchedEffect(Unit) {
         repository.settingsFlow.collectLatest { settings ->
             forcedEncoding = settings.forcedEncoding
+            customPatterns = settings.customChapterPatterns
         }
     }
 
@@ -96,7 +98,7 @@ fun ReaderScreen(
         isLoading = true
         errorMessage = null
         try {
-            val result = loadFile(context, filePath, fileName, forcedEncoding)
+            val result = loadFile(context, filePath, fileName, forcedEncoding, customPatterns)
             if (result != null && result.isNotEmpty()) {
                 chapters = result
                 repository.addRecentFile(filePath, fileName)
@@ -289,7 +291,8 @@ private suspend fun loadFile(
     context: android.content.Context,
     filePath: String,
     fileName: String,
-    forcedEncoding: String?
+    forcedEncoding: String?,
+    customPatterns: List<String> = emptyList()
 ): List<Chapter>? = withContext(Dispatchers.IO) {
     try {
         val isLocalFile = !filePath.startsWith("content://")
@@ -302,7 +305,7 @@ private suspend fun loadFile(
             EpubParser.parse(inputStream)
         } else {
             val (text, _) = EncodingDetector.detectAndRead(inputStream, forcedEncoding)
-            TxtParser.parse(text)
+            TxtParser.parse(text, customPatterns)
         }
         inputStream.close()
         result.ifEmpty { null }

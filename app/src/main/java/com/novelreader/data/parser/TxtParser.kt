@@ -28,12 +28,20 @@ object TxtParser {
         Regex("""^##\s+.*(第.{1,5}[章回节集篇卷]|Chapter|Episode|Part|序章|终章|尾声|番外|楔子|引子|序幕).*$""", RegexOption.IGNORE_CASE),
     )
 
-    fun parse(inputStream: InputStream, charset: Charset = Charsets.UTF_8): List<Chapter> {
+    fun parse(inputStream: InputStream, charset: Charset = Charsets.UTF_8, customPatterns: List<String> = emptyList()): List<Chapter> {
         val text = String(inputStream.readBytes(), charset)
-        return parse(text)
+        return parse(text, customPatterns)
     }
 
-    fun parse(text: String): List<Chapter> {
+    fun parse(text: String, customPatterns: List<String> = emptyList()): List<Chapter> {
+        val allPatterns = mutableListOf<Regex>()
+        allPatterns.addAll(chapterPatterns)
+        for (cp in customPatterns) {
+            try {
+                allPatterns.add(Regex(cp))
+            } catch (_: Exception) {}
+        }
+
         val lines = text.lines()
         val chapters = mutableListOf<Chapter>()
         val currentContent = StringBuilder()
@@ -56,7 +64,7 @@ object TxtParser {
 
         for (line in lines) {
             val trimmed = line.trim()
-            if (isChapterTitle(trimmed)) {
+            if (isChapterTitle(trimmed, allPatterns)) {
                 flushChapter()
                 currentTitle = trimmed
             } else {
@@ -87,10 +95,10 @@ object TxtParser {
             .trim()
     }
 
-    private fun isChapterTitle(line: String): Boolean {
+    private fun isChapterTitle(line: String, patterns: List<Regex> = chapterPatterns): Boolean {
         if (line.length > 60) return false
         if (line.isBlank()) return false
-        return chapterPatterns.any { it.matches(line) }
+        return patterns.any { it.matches(line) }
     }
 
     private fun splitByEmptyLines(text: String): List<Chapter> {

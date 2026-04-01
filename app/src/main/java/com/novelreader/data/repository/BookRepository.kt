@@ -17,7 +17,8 @@ data class AppSettings(
     val fontSize: Float = 16f,
     val lineHeight: Float = 1.6f,
     val forcedEncoding: String? = null,
-    val recentFiles: List<String> = emptyList()
+    val recentFiles: List<String> = emptyList(),
+    val customChapterPatterns: List<String> = emptyList()
 )
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "novel_reader_prefs")
@@ -31,6 +32,7 @@ class BookRepository(private val context: Context) {
         private val LINE_HEIGHT = floatPreferencesKey("line_height")
         private val FORCED_ENCODING = stringPreferencesKey("forced_encoding")
         private val RECENT_FILES = stringPreferencesKey("recent_files")
+        private val CUSTOM_PATTERNS = stringPreferencesKey("custom_chapter_patterns")
         private val READING_PREFIX = "reading_chapter_"
         private val SCROLL_PREFIX = "scroll_offset_"
     }
@@ -55,7 +57,8 @@ class BookRepository(private val context: Context) {
                 fontSize = prefs[FONT_SIZE] ?: 16f,
                 lineHeight = prefs[LINE_HEIGHT] ?: 1.6f,
                 forcedEncoding = prefs[FORCED_ENCODING],
-                recentFiles = prefs[RECENT_FILES]?.split("||")?.filter { it.isNotEmpty() } ?: emptyList()
+                recentFiles = prefs[RECENT_FILES]?.split("||")?.filter { it.isNotEmpty() } ?: emptyList(),
+                customChapterPatterns = prefs[CUSTOM_PATTERNS]?.split("||")?.filter { it.isNotEmpty() } ?: emptyList()
             )
         }
 
@@ -89,6 +92,16 @@ class BookRepository(private val context: Context) {
                 prefs[FORCED_ENCODING] = encoding
             } else {
                 prefs.remove(FORCED_ENCODING)
+            }
+        }
+    }
+
+    suspend fun updateCustomChapterPatterns(patterns: List<String>) {
+        context.dataStore.edit { prefs ->
+            if (patterns.isEmpty()) {
+                prefs.remove(CUSTOM_PATTERNS)
+            } else {
+                prefs[CUSTOM_PATTERNS] = patterns.joinToString("||")
             }
         }
     }
