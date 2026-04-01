@@ -2,7 +2,6 @@ package com.novelreader.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import android.provider.DocumentsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -411,82 +410,54 @@ private suspend fun importFolder(
     onBookClick: (String, String) -> Unit
 ) = withContext(Dispatchers.IO) {
     var firstFile: Pair<String, String>? = null
+    val zipDir = File(context.filesDir, "zip_books")
+    val bookDir = File(context.filesDir, "books")
+    zipDir.mkdirs()
+    bookDir.mkdirs()
 
-    // Collect all book URIs recursively
-    data class BookUri(val uri: Uri, val name: String, val isZip: Boolean)
-
-    val bookUris = mutableListOf<BookUri>()
-
-    fun scanUri(uri: Uri, depth: Int = 0) {
-        if (depth > 10) return  // 防止过深递归导致卡死
-        val treeDocId = DocumentsContract.getTreeDocumentId(uri)
-        val docUri = DocumentsContract.buildChildDocumentsUriUsingTree(uri, treeDocId)
-        val cursor = context.contentResolver.query(
-            docUri,
-            arrayOf(
-                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                DocumentsContract.Document.COLUMN_MIME_TYPE,
-                DocumentsContract.Document.COLUMN_DISPLAY_NAME
-            ), null, null, null
-        ) ?: return
-
-        cursor.use {
-            while (it.moveToNext()) {
-                val docId = it.getString(0)
-                val mimeType = it.getString(1)
-                val name = it.getString(2)
-                val childUri = DocumentsContract.buildDocumentUriUsingTree(uri, docId)
-
-                if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
-                    scanUri(childUri, depth + 1)
-                } else {
-                    val lower = name.lowercase()
-                    if (lower.endsWith(".txt") || lower.endsWith(".epub")) {
-                        bookUris.add(BookUri(childUri, name, false))
-                    } else if (lower.endsWith(".zip")) {
-                        bookUris.add(BookUri(childUri, name, true))
+    fun scanAndImport(dirUri: Uri, depth: Int = 0) {
+        if (depth > 8) return
+        val dir = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, dirUri) ?: return
+        for (file in dir.listFiles()) {
+            if (file.isDirectory) {
+                scanAndImport(file.uri, depth + 1)
+            } else if (file.canRead()) {
+                val name = file.name ?: continue
+                val lower = name.lowercase()
+                try {
+                    if (lower.endsWith(".zip")) {
+                        context.contentResolver.openInputStream(file.uri)?.use { zipInput ->
+                            val entries = ZipParser.scan(zipInput)
+                            for (entry in entries) {
+                                val safeName = name.substringBeforeLast(".") + "_" + entry.name
+                                val localFile = File(zipDir, safeName.replace("/", "_"))
+                                localFile.parentFile?.mkdirs()
+                                entry.inputStreamProvider().use { input ->
+                                    localFile.outputStream().use { output -> input.copyTo(output) }
+                                }
+                                repository.addRecentFile(localFile.absolutePath, entry.name)
+                                if (firstFile == null) {
+                                    firstFile = localFile.absolutePath to entry.name
+                                }
+                            }
+                        }
+                    } else if (lower.endsWith(".txt") || lower.endsWith(".epub")) {
+                        val localFile = File(bookDir, name)
+                        localFile.parentFile?.mkdirs()
+                        context.contentResolver.openInputStream(file.uri)?.use { input ->
+                            localFile.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        repository.addRecentFile(localFile.absolutePath, name)
+                        if (firstFile == null) {
+                            firstFile = localFile.absolutePath to name
+                        }
                     }
-                }
+                } catch (_: Exception) {}
             }
         }
     }
 
-    scanUri(folderUri)
-
-    // Import each file (outside recursive function, inside coroutine)
-    for ((fileUri, name, isZip) in bookUris) {
-        try {
-            if (isZip) {
-                context.contentResolver.openInputStream(fileUri)?.use { zipInput ->
-                    val entries = ZipParser.scan(zipInput)
-                    val zipDir = File(context.filesDir, "zip_books")
-                    zipDir.mkdirs()
-                    for (entry in entries) {
-                        val safeName = name.substringBeforeLast(".") + "/" + entry.name
-                        val localFile = File(zipDir, safeName.replace("/", "_"))
-                        localFile.parentFile?.mkdirs()
-                        entry.inputStreamProvider().use { input ->
-                            localFile.outputStream().use { output -> input.copyTo(output) }
-                        }
-                        repository.addRecentFile(localFile.absolutePath, entry.name)
-                        if (firstFile == null) {
-                            firstFile = localFile.absolutePath to entry.name
-                        }
-                    }
-                }
-            } else {
-                val localFile = File(context.filesDir, "books/$name")
-                localFile.parentFile?.mkdirs()
-                context.contentResolver.openInputStream(fileUri)?.use { input ->
-                    localFile.outputStream().use { output -> input.copyTo(output) }
-                }
-                repository.addRecentFile(localFile.absolutePath, name)
-                if (firstFile == null) {
-                    firstFile = localFile.absolutePath to name
-                }
-            }
-        } catch (_: Exception) {}
-    }
+    scanAndImport(folderUri)
 
     firstFile?.let { (path, name) ->
         withContext(Dispatchers.Main) { onBookClick(path, name) }
