@@ -64,6 +64,26 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           retention-days: 30
 
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: "Build ${{ github.run_number }}"
+          body: |
+            📱 **小说章节识别器** - 自动构建
+            
+            🔧 构建信息:
+            - Commit: ${{ github.sha }}
+            - 分支: ${{ github.ref_name }}
+            - 构建号: ${{ github.run_number }}
+          files: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Cleanup Gradle cache
         run: |
           rm -f ~/.gradle/caches/modules-2/modules-2.lock
