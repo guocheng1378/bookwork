@@ -15,9 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novelreader.data.model.Chapter
@@ -44,7 +42,6 @@ fun ReaderScreen(
     onSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     var chapters by remember { mutableStateOf<List<Chapter>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -224,7 +221,6 @@ fun ReaderScreen(
                                                 toastVisible = true
                                             },
                                             onLongClick = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                 ClipboardHelper.copyContent(context, chapter.content, chapter.wordCount)
                                                 toastMessage = "内容已复制（约${chapter.wordCount}字）"
                                                 toastVisible = true
