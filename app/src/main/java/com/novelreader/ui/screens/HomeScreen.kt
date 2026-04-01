@@ -434,7 +434,12 @@ private suspend fun importFolder(
                 } else if (file.canRead()) {
                     val name = file.name ?: continue
                     val lower = name.lowercase()
-                    if (lower.endsWith(".zip")) {
+                    val mime = file.type ?: ""
+                    val isZip = lower.endsWith(".zip") || mime == "application/zip" || mime == "application/x-zip-compressed"
+                    val isTxt = lower.endsWith(".txt") || mime == "text/plain"
+                    val isEpub = lower.endsWith(".epub") || mime == "application/epub+zip"
+                    val isMd = lower.endsWith(".md") || mime == "text/markdown" || mime == "text/x-markdown"
+                    if (isZip) {
                         context.contentResolver.openInputStream(file.uri)?.use { zipInput ->
                             val entries = ZipParser.scan(zipInput)
                             for (entry in entries) {
@@ -450,7 +455,7 @@ private suspend fun importFolder(
                                 }
                             }
                         }
-                    } else if (lower.endsWith(".txt") || lower.endsWith(".epub") || lower.endsWith(".md")) {
+                    } else if (isTxt || isEpub || isMd) {
                         val localFile = File(bookDir, name)
                         localFile.parentFile?.mkdirs()
                         context.contentResolver.openInputStream(file.uri)?.use { input ->
