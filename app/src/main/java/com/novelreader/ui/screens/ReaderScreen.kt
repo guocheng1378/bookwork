@@ -162,7 +162,7 @@ fun ReaderScreen(
                             )
                         }
 
-                        HorizontalDivider(
+                        Divider(
                             modifier = Modifier.padding(vertical = 16.dp),
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
