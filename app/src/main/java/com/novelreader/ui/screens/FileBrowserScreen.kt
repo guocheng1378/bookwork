@@ -119,6 +119,62 @@ private fun FileBrowserContent(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             )
+        },
+        bottomBar = {
+            // Action buttons at bottom
+            Surface(
+                tonalElevation = 3.dp,
+                shadowElevation = 8.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Import current folder button (for FOLDERS_ONLY mode)
+                    if (browseMode == BrowseMode.FOLDERS_ONLY || browseMode == BrowseMode.FILES_AND_FOLDERS) {
+                        Button(
+                            onClick = { onFolderSelected(currentDir) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.FolderOpen,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("导入此文件夹")
+                        }
+                    }
+                    
+                    // Browse current folder button (for FILES_AND_FOLDERS mode)
+                    if (browseMode == BrowseMode.FILES_AND_FOLDERS) {
+                        OutlinedButton(
+                            onClick = { 
+                                // Open first file in current directory
+                                val firstFile = files.firstOrNull { !it.isDirectory }
+                                if (firstFile != null) {
+                                    onFileSelected(firstFile.file)
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = files.any { !it.isDirectory }
+                        ) {
+                            Icon(
+                                Icons.Default.Description,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("浏览文件")
+                        }
+                    }
+                }
+            }
         }
     ) { paddingValues ->
         Column(
@@ -126,6 +182,35 @@ private fun FileBrowserContent(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Current folder selection hint
+            if (browseMode == BrowseMode.FOLDERS_ONLY) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.TouchApp,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "点击下方「导入此文件夹」按钮导入当前目录",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+            
             when {
                 isLoading -> {
                     Box(
@@ -171,11 +256,6 @@ private fun FileBrowserContent(
                                     } else {
                                         onFileSelected(fileItem.file)
                                     }
-                                },
-                                onLongClick = {
-                                    if (fileItem.isDirectory && browseMode != BrowseMode.FILES_ONLY) {
-                                        onFolderSelected(fileItem.file)
-                                    }
                                 }
                             )
                         }
@@ -190,8 +270,7 @@ private fun FileBrowserContent(
 private fun FileListItem(
     item: FileItem,
     browseMode: BrowseMode,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onClick: () -> Unit
 ) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
     
@@ -261,14 +340,12 @@ private fun FileListItem(
                 }
             }
             
-            // Arrow indicator for folders
-            if (item.isDirectory) {
-                Icon(
-                    Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            // Arrow indicator
+            Icon(
+                if (item.isDirectory) Icons.Default.ChevronRight else Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -302,4 +379,8 @@ private fun formatFileSize(bytes: Long): String {
     }
 }
 
-
+enum class BrowseMode {
+    FILES_ONLY,
+    FOLDERS_ONLY,
+    FILES_AND_FOLDERS
+}
