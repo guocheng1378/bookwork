@@ -59,13 +59,19 @@ fun ReaderScreen(
         isLoading = true
         errorMessage = null
         scope.launch {
+            val pickedName = androidx.documentfile.provider.DocumentFile
+                .fromSingleUri(context, uri)?.name
+                ?: uri.lastPathSegment?.substringAfterLast('/')
+                ?: fileName
             var localPath = uri.toString()
-            val pickedName = uri.lastPathSegment?.substringAfterLast('/') ?: fileName
+            var persistOk = false
             try {
                 context.contentResolver.takePersistableUriPermission(
                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-            } catch (_: Exception) {
+                persistOk = true
+            } catch (_: Exception) {}
+            if (!persistOk) {
                 try {
                     val localFile = File(context.filesDir, "books/$pickedName")
                     localFile.parentFile?.mkdirs()
