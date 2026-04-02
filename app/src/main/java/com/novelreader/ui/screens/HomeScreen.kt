@@ -60,7 +60,10 @@ fun HomeScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri ?: return@rememberLauncherForActivityResult
-        val fileName = uri.lastPathSegment?.substringAfterLast('/') ?: "未知文件"
+        val fileName = androidx.documentfile.provider.DocumentFile
+            .fromSingleUri(context, uri)?.name
+            ?: uri.lastPathSegment?.substringAfterLast('/')
+            ?: "未知文件"
 
         if (fileName.endsWith(".zip", ignoreCase = true)) {
             importing = true
@@ -78,12 +81,15 @@ fun HomeScreen(
             }
         } else {
             var localPath: String? = null
+            var persistOk = false
             try {
                 context.contentResolver.takePersistableUriPermission(
                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
                 localPath = uri.toString()
-            } catch (_: Exception) {
+                persistOk = true
+            } catch (_: Exception) {}
+            if (!persistOk) {
                 try {
                     val localFile = File(context.filesDir, "books/$fileName")
                     localFile.parentFile?.mkdirs()
