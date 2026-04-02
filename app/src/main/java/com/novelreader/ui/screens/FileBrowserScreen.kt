@@ -302,8 +302,4 @@ private fun formatFileSize(bytes: Long): String {
     }
 }
 
-enum class BrowseMode {
-    FILES_ONLY,
-    FOLDERS_ONLY,
-    FILES_AND_FOLDERS
-}
+
