@@ -1,4 +1,5 @@
 package com.novelreader.ui.screens
+// Updated: 2026-04-02 - Improved selection UI
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
