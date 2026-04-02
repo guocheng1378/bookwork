@@ -136,6 +136,14 @@ class BookRepository(private val context: Context) {
         }
     }
 
+    suspend fun removeRecentFile(filePath: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[RECENT_FILES]?.split("||")?.filter { it.isNotEmpty() }?.toMutableList() ?: mutableListOf()
+            current.removeAll { it.startsWith("$filePath::") }
+            prefs[RECENT_FILES] = current.joinToString("||")
+        }
+    }
+
     fun getRecentFiles(): Flow<List<BookFile>> = context.dataStore.data
         .catch { emit(emptyPreferences()) }
         .map { prefs ->
