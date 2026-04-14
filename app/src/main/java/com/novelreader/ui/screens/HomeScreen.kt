@@ -87,8 +87,13 @@ fun HomeScreen(
                 context.contentResolver.takePersistableUriPermission(
                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-                localPath = uri.toString()
-                persistOk = true
+                // 验证权限是否真的持久化成功
+                persistOk = context.contentResolver.persistedUriPermissions.any {
+                    it.uri == uri && it.isReadPermission
+                }
+                if (persistOk) {
+                    localPath = uri.toString()
+                }
             } catch (_: Exception) {}
             if (!persistOk) {
                 try {
@@ -113,7 +118,16 @@ fun HomeScreen(
             context.contentResolver.takePersistableUriPermission(
                 uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
-        } catch (_: Exception) {}
+            // 验证文件夹权限是否持久化成功
+            val persisted = context.contentResolver.persistedUriPermissions.any {
+                it.uri == uri && it.isReadPermission
+            }
+            if (!persisted) {
+                android.util.Log.w("HomeScreen", "文件夹URI权限持久化失败，将依赖临时权限")
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("HomeScreen", "takePersistableUriPermission 失败", e)
+        }
         importing = true
         importProgress = "正在扫描文件夹..."
         scope.launch {
