@@ -9,7 +9,8 @@ object ClipboardHelper {
 
     fun copyText(context: Context, text: String, label: String = "novel_text") {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-        clipboard?.setPrimaryClip(ClipData.newPlainText(label, text))
+        if (clipboard == null) return
+        clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
         HapticHelper.trigger(context)
     }
 

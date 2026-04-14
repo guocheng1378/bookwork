@@ -6,23 +6,29 @@ import java.util.zip.ZipInputStream
 
 object EpubParser {
 
+    /** 单个 epub 内部文件最大 50MB，防止 OOM */
+    private const val MAX_ENTRY_SIZE = 50 * 1024 * 1024
+
     fun parse(inputStream: InputStream): List<Chapter> {
         val chapters = mutableListOf<Chapter>()
-        val zipInputStream = ZipInputStream(inputStream)
-        val htmlContents = mutableListOf<Pair<String, String>>() // href -> content
-
-        // Collect all files in the ZIP
         val entries = mutableMapOf<String, ByteArray>()
-        var entry = zipInputStream.nextEntry
-        while (entry != null) {
-            if (!entry.isDirectory) {
-                val name = entry.name
-                val bytes = zipInputStream.readBytes()
-                entries[name] = bytes
+
+        // 使用 use 自动关闭流，防止资源泄漏
+        ZipInputStream(inputStream).use { zipInputStream ->
+            var entry = zipInputStream.nextEntry
+            while (entry != null) {
+                if (!entry.isDirectory) {
+                    val name = entry.name
+                    // 限制单文件大小，防止 OOM
+                    val maxSize = if (entry.size > 0) minOf(entry.size, MAX_ENTRY_SIZE.toLong()) else MAX_ENTRY_SIZE.toLong()
+                    val bytes = zipInputStream.readBytes()
+                    if (bytes.size <= MAX_ENTRY_SIZE) {
+                        entries[name] = bytes
+                    }
+                }
+                entry = zipInputStream.nextEntry
             }
-            entry = zipInputStream.nextEntry
         }
-        zipInputStream.close()
 
         // Find OPF file
         val containerXml = entries["META-INF/container.xml"]?.toString(Charsets.UTF_8) ?: return chapters

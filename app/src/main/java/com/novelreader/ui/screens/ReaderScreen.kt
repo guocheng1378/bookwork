@@ -312,19 +312,20 @@ private suspend fun loadFile(
 ): List<Chapter>? = withContext(Dispatchers.IO) {
     try {
         val isLocalFile = !filePath.startsWith("content://")
-        val inputStream = if (isLocalFile) {
+        val rawInputStream = if (isLocalFile) {
             FileInputStream(File(filePath))
         } else {
             context.contentResolver.openInputStream(Uri.parse(filePath)) ?: return@withContext null
         }
-        val result = if (fileName.endsWith(".epub", ignoreCase = true)) {
-            EpubParser.parse(inputStream)
-        } else {
-            val (text, _) = EncodingDetector.detectAndRead(inputStream, forcedEncoding)
-            TxtParser.parse(text, customPatterns)
+        rawInputStream.use { inputStream ->
+            val result = if (fileName.endsWith(".epub", ignoreCase = true)) {
+                EpubParser.parse(inputStream)
+            } else {
+                val (text, _) = EncodingDetector.detectAndRead(inputStream, forcedEncoding)
+                TxtParser.parse(text, customPatterns)
+            }
+            result.ifEmpty { null }
         }
-        inputStream.close()
-        result.ifEmpty { null }
     } catch (e: Exception) {
         e.printStackTrace()
         null
