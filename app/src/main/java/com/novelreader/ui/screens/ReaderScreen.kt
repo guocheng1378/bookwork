@@ -63,13 +63,19 @@ fun ReaderScreen(
                 .fromSingleUri(context, uri)?.name
                 ?: uri.lastPathSegment?.substringAfterLast('/')
                 ?: fileName
-            var localPath = uri.toString()
+            var localPath: String? = null
             var persistOk = false
             try {
                 context.contentResolver.takePersistableUriPermission(
                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-                persistOk = true
+                // 验证权限是否真的持久化成功
+                persistOk = context.contentResolver.persistedUriPermissions.any {
+                    it.uri == uri && it.isReadPermission
+                }
+                if (persistOk) {
+                    localPath = uri.toString()
+                }
             } catch (_: Exception) {}
             if (!persistOk) {
                 try {
@@ -81,11 +87,15 @@ fun ReaderScreen(
                     localPath = localFile.absolutePath
                 } catch (_: Exception) {}
             }
-            loadFile(context, localPath, pickedName, forcedEncoding, customPatterns)?.let { result ->
-                chapters = result
-                repository.addRecentFile(localPath, pickedName)
-            } ?: run {
-                errorMessage = "无法读取文件，请重新选择"
+            if (localPath != null) {
+                loadFile(context, localPath, pickedName, forcedEncoding, customPatterns)?.let { result ->
+                    chapters = result
+                    repository.addRecentFile(localPath, pickedName)
+                } ?: run {
+                    errorMessage = "无法读取文件，请重新选择"
+                }
+            } else {
+                errorMessage = "无法获取文件权限，请重新选择"
             }
             isLoading = false
         }
