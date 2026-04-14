@@ -3,6 +3,7 @@ package com.novelreader.data.parser
 import com.novelreader.data.model.Chapter
 import java.io.InputStream
 import java.nio.charset.Charset
+import java.util.concurrent.ConcurrentHashMap
 
 object TxtParser {
 
@@ -28,8 +29,8 @@ object TxtParser {
         Regex("""^##\s+.*(第.{1,5}[章回节集篇卷]|Chapter|Episode|Part|序章|终章|尾声|番外|楔子|引子|序幕).*$""", RegexOption.IGNORE_CASE),
     )
 
-    /** 缓存已编译的自定义正则，避免重复编译 */
-    private val customPatternCache = mutableMapOf<String, Regex>()
+    /** 缓存已编译的自定义正则，避免重复编译（线程安全） */
+    private val customPatternCache = ConcurrentHashMap<String, Regex>()
 
     fun parse(inputStream: InputStream, charset: Charset = Charsets.UTF_8, customPatterns: List<String> = emptyList()): List<Chapter> {
         val text = String(inputStream.readBytes(), charset)
